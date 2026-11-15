@@ -24,7 +24,22 @@ export default source;
 
 const DAYS = [0, 1]; // Heute, Morgen
 
+// Anzeige laut ROADMAP „Anzeige": alles außer Schneefallgrenze; „Morgen" ab
+// 18 Uhr (horizonHours 6), Intervalle rollierend die nächsten 8.
+const DISPLAY_DAILY = {
+  layout: 'cards',
+  fields: ['condition', 'tempMax', 'tempMin', 'precipMm', 'precipProb', 'sunHours', 'thunderProb', 'newSnowCm', ['windDir', 'windBft']],
+  hidePast: true,
+  horizonHours: 6,
+};
+const DISPLAY_INTERVALS = {
+  fields: ['condition', 'temp', ['precipMm', 'precipProb'], 'thunderProb', ['windDir', 'windBft', 'windKmh']],
+  hidePast: true,
+  limit: 8,
+};
+
 const absUrl = (src) => (src ? new URL(src, source.url).href : null);
+const isNight = (src) => (src ? /\/night\//.test(src) : null);
 
 /** Icon-Titel "stark bewölkt 1.00h Sonne" → "stark bewölkt" */
 const condition = (title) => cleanText(title).replace(/\s*\d+(?:[.,]\d+)?h Sonne$/, '') || null;
@@ -58,6 +73,7 @@ export function parse(html) {
     const entry = {
       date: isoDate(date),
       condition: condition(icon.attr('title')),
+      isNight: isNight(icon.attr('src')),
       iconUrl: absUrl(icon.attr('src')),
       tempMax: num(day.find('.tmax')),
       tempMin: num(day.find('.tmin')),
@@ -92,6 +108,7 @@ export function parse(html) {
       const e = {
         time,
         condition: condition(ivIcon.attr('title')),
+        isNight: isNight(ivIcon.attr('src')),
         iconUrl: absUrl(ivIcon.attr('src')),
         temp: num(iv.find('.tmax')),
         precipMm: num(iv.find('.rrr')),
@@ -108,8 +125,8 @@ export function parse(html) {
 
   return {
     sections: [
-      { id: 'daily', title: 'Tageswerte', entries: daily },
-      { id: 'intervals', title: '3-Stunden-Prognose', entries: intervals },
+      { id: 'daily', title: 'Tageswerte', display: DISPLAY_DAILY, entries: daily },
+      { id: 'intervals', title: '3-Stunden-Prognose', display: DISPLAY_INTERVALS, entries: intervals },
     ],
     warnings: [],
   };

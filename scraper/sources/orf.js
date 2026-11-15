@@ -4,6 +4,8 @@
 //   <td class="stationWeather">heiter</td>
 //   <td class="stationTemperature">&minus;1,7&thinsp;<abbr>°C</abbr></td>
 // Messzeitpunkt: <p class="lastUpdateMessage">Letzte Messwerte von 20.00 Uhr</p>
+// Sonne (Graz): <div class="sunData"><p class="rise">…07:02…</p><p class="set">…16:24…</p></div>
+//   → isNight der Beobachtungen (ORF liefert nur Text, kein Tag/Nacht-Symbol)
 
 import * as cheerio from 'cheerio';
 import { runIfMain } from '../lib/cli.js';
@@ -27,16 +29,26 @@ const STATIONS = [
   { slug: 'grazuniversitaet', name: 'Graz-Universität' },
 ];
 
-/** "Letzte Messwerte von 20.00 Uhr" → ISO. Liegt die Uhrzeit nach jetzt, ist sie von gestern. */
+const DISPLAY = { fields: ['condition', 'temp'] };
+
+/** "…07:02…" → Minuten seit Mitternacht, sonst null */
+function minutesOfDay(text) {
+  const m = cleanText(text).match(/(\d{1,2})[.:](\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/**
+ * "Letzte Messwerte von 20.00 Uhr" → { iso, minutes }. Liegt die Uhrzeit nach
+ * jetzt, ist sie von gestern.
+ */
 function parseObservedAt(text, now) {
-  const m = cleanText(text).match(/(\d{1,2})[.:](\d{2})\s*Uhr/);
-  if (!m) return null;
-  const hour = Number(m[1]);
-  const minute = Number(m[2]);
+  if (!/Uhr/.test(text)) return null;
+  const minutes = minutesOfDay(text);
+  if (minutes === null) return null;
   const p = viennaParts(now);
   let date = viennaToday(now);
-  if (hour * 60 + minute > p.hour * 60 + p.minute + 30) date = addDays(date, -1);
-  return viennaIso(date.year, date.month, date.day, hour, minute);
+  if (minutes > p.hour * 60 + p.minute + 30) date = addDays(date, -1);
+  return { iso: viennaIso(date.year, date.month, date.day, Math.floor(minutes / 60), minutes % 60), minutes };
 }
 
 export function parse(html, { now }) {
@@ -52,6 +64,14 @@ export function parse(html, { now }) {
   });
 
   const warnings = [];
+  const observed = parseObservedAt(cleanText($('.lastUpdateMessage').first().text()), now);
+  if (!observed) warnings.push('Messzeitpunkt („Letzte Messwerte von …") nicht gefunden');
+  const rise = minutesOfDay($('.sunData .rise').first().text());
+  const set = minutesOfDay($('.sunData .set').first().text());
+  const isNight = observed && rise !== null && set !== null
+    ? observed.minutes < rise || observed.minutes >= set
+    : null;
+
   const entries = [];
   for (const station of STATIONS) {
     const tr = bySlug.get(station.slug);
@@ -65,17 +85,21 @@ export function parse(html, { now }) {
     entries.push({
       location: cleanText(tr.find('td.stationName').text()) || station.name,
       condition: cleanText(tr.find('td.stationWeather').text()) || null,
+      isNight,
       temp,
     });
   }
   if (!entries.length) throw new Error('Keine der Grazer Stationen gefunden');
   if (entries.every((e) => e.temp === null)) throw new Error('Keine Station mit Temperatur');
 
-  const observedAt = parseObservedAt($('.lastUpdateMessage').first().text(), now);
-  if (!observedAt) warnings.push('Messzeitpunkt („Letzte Messwerte von …") nicht gefunden');
-
   return {
-    sections: [{ id: 'stations', title: 'Messstationen Graz', ...(observedAt && { observedAt }), entries }],
+    sections: [{
+      id: 'stations',
+      title: 'Messstationen Graz',
+      ...(observed && { observedAt: observed.iso }),
+      display: DISPLAY,
+      entries,
+    }],
     warnings,
   };
 }

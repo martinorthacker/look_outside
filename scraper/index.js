@@ -1,11 +1,13 @@
-// Orchestrator: ruft alle Quellen ab (lib/collect.js) und schreibt
-// docs/data.json, aber nur, wenn sich der Inhalt geändert hat. Reine
-// Zeitstempel zählen nicht, damit der Workflow keine leeren Commits erzeugt.
+// Orchestrator: ruft alle Quellen ab (lib/collect.js) und schreibt docs/data.json.
+// Die vorherige docs/data.json (im Workflow von der Live-Seite geholt) liefert
+// bei Quellenausfall die letzten gültigen Daten.
+// Geschrieben wird bei jedem Lauf: data.json wird nicht committet, sondern
+// deployt (ROADMAP #2), und generatedAt zeigt so den echten letzten Lauf.
 // Exit-Code 0 auch bei Quellenfehlern (die zeigt das Frontend an). Ein roter
 // Workflow-Lauf bedeutet einen Programmfehler.
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { collect, sameContent } from './lib/collect.js';
+import { collect } from './lib/collect.js';
 import { SOURCES } from './sources/index.js';
 
 const OUT = new URL('../docs/data.json', import.meta.url);
@@ -21,6 +23,7 @@ function report(level, title, message) {
 }
 
 const previous = await readFile(OUT, 'utf8').then(JSON.parse).catch(() => null);
+if (!previous) console.log('Keine (lesbare) vorherige data.json – kein Fallback für Ausfälle');
 const data = await collect(SOURCES, { previous });
 
 for (const s of data.sources) {
@@ -30,9 +33,5 @@ for (const s of data.sources) {
   for (const w of s.warnings) report('notice', s.id, w);
 }
 
-if (sameContent(previous, data)) {
-  console.log('data.json inhaltlich unverändert, nicht geschrieben');
-} else {
-  await writeFile(OUT, `${JSON.stringify(data, null, 2)}\n`);
-  console.log('data.json geschrieben');
-}
+await writeFile(OUT, `${JSON.stringify(data, null, 2)}\n`);
+console.log('docs/data.json geschrieben');

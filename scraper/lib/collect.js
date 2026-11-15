@@ -3,7 +3,6 @@
 // anderen nicht. Sie bekommt status "error" und behält die letzten gültigen
 // Daten; deren Alter ist über lastSuccessAt erkennbar.
 
-import { isDeepStrictEqual } from 'node:util';
 import { fetchHtml } from './http.js';
 import { validateResult } from './schema.js';
 import { TZ, toViennaIso } from './time.js';
@@ -49,12 +48,4 @@ export async function collect(sources, { now = new Date(), previous = null, fetc
   };
 }
 
-const isCompatible = (data) => data?.schemaVersion === SCHEMA_VERSION && Array.isArray(data.sources);
-
-/** Inhalt ohne die Zeitstempel, die sich bei jedem Lauf ändern. */
-const content = (data) => data.sources.map(({ fetchedAt, lastSuccessAt, ...rest }) => rest);
-
-/** true, wenn sich nur Zeitstempel unterscheiden → nicht schreiben, kein leerer Commit. */
-export function sameContent(previous, next) {
-  return isCompatible(previous) && isDeepStrictEqual(content(previous), content(next));
-}
+const isCompatible = (data) => data?.schemaVersion === SCHEMA_VERSION && Array.isArray(data?.sources);

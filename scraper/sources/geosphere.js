@@ -19,7 +19,18 @@ const source = {
 };
 export default source;
 
+// Anzeige laut ROADMAP „Anzeige": ohne Radl-Temperatur und Wind.
+const DISPLAY = { fields: ['condition', 'temp', 'precipMm'], hidePast: true };
+
 const COMPASS = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+
+/** Symbolnamen: Tag "c.png", Nacht "nc.png". Unbekanntes Muster → null. */
+export function isNightIcon(src) {
+  const name = (src ?? '').split('/').pop().replace(/\.png$/i, '');
+  if (/^n[a-z]$/.test(name)) return true;
+  if (/^[a-z]$/.test(name)) return false;
+  return null;
+}
 
 /** Grad (woher) → 8-teilige Himmelsrichtung, deutsch. */
 export function compass(deg) {
@@ -76,6 +87,7 @@ export function parse(html, { now }) {
       time: viennaIso(date.year, date.month, date.day, hour),
       timeEnd: viennaIso(date.year, date.month, date.day, hour + 1),
       condition: cleanText(img.attr('title')) || null,
+      isNight: isNightIcon(img.attr('src')),
       iconUrl: img.attr('src') ? new URL(img.attr('src'), source.url).href : null,
       temp,
       tempFeels: feels ? parseNumber(feels[1]) : null,
@@ -87,7 +99,7 @@ export function parse(html, { now }) {
   });
 
   return {
-    sections: [{ id: 'hourly', title: 'Stundenprognose Stadtzentrum', entries }],
+    sections: [{ id: 'hourly', title: 'Stundenprognose Stadtzentrum', display: DISPLAY, entries }],
     warnings: [],
   };
 }

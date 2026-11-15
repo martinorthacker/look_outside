@@ -48,4 +48,17 @@ test('validateResult: lehnt Leerwerte, Tippfehler und falsche Typen ab', () => {
   assert.throws(() => validateResult({ sections: [{ id: 's', title: 'T', entries: [{ location: 'G', temp: NaN }] }] }), /temp/);
   assert.throws(() => validateResult({ sections: [{ id: 's', title: 'T', entries: [{ temp: 1 }] }] }), /Zeilenschlüssel/);
   assert.throws(() => validateResult({ sections: [{ id: 's', title: 'T', entries: [{ time: '2026-11-15 20:00' }] }] }), /time/);
+  assert.throws(() => validateResult({ sections: [{ id: 's', title: 'T', entries: [{ location: 'G', isNight: 'ja' }] }] }), /isNight/);
+});
+
+test('validateResult: display-Hinweise', () => {
+  const withDisplay = (display) => ({ sections: [{ id: 's', title: 'T', display, entries: [{ location: 'Graz', temp: 1 }] }] });
+  validateResult(withDisplay({ fields: ['condition', ['precipMm', 'precipProb']], layout: 'cards', hidePast: true, limit: 8, horizonHours: 6 }));
+  assert.throws(() => validateResult(withDisplay({ fields: ['tmp'] })), /unbekanntes\/nicht anzeigbares Feld "tmp"/);
+  assert.throws(() => validateResult(withDisplay({ fields: ['iconUrl'] })), /iconUrl/);
+  assert.throws(() => validateResult(withDisplay({ fields: [] })), /fields/);
+  assert.throws(() => validateResult(withDisplay({ fields: [[]] })), /leere Feldgruppe/);
+  assert.throws(() => validateResult(withDisplay({ layout: 'grid' })), /layout/);
+  assert.throws(() => validateResult(withDisplay({ limit: 0 })), /limit/);
+  assert.throws(() => validateResult(withDisplay({ sortBy: 'temp' })), /unbekanntes Feld "sortBy"/);
 });

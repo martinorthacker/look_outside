@@ -1,8 +1,8 @@
-// Orchestrierung: Fehlerisolation pro Quelle und Änderungserkennung.
+// Orchestrierung: Fehlerisolation pro Quelle und Fallback auf letzte gültige Daten.
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { collect, sameContent } from '../lib/collect.js';
+import { collect } from '../lib/collect.js';
 
 const sections = (temp) => [{ id: 's', title: 'T', entries: [{ location: 'Graz', temp }] }];
 const okSource = (id, temp) => ({ id, name: id, url: `https://example.org/${id}`, parse: () => ({ sections: sections(temp), warnings: [] }) });
@@ -42,11 +42,10 @@ test('collect: ungültiges Parser-Ergebnis wird zum Fehlerzustand', async () => 
   assert.match(e.error, /Schema/);
 });
 
-test('sameContent: nur Zeitstempel geändert → gleich; Werte/Status geändert → verschieden', async () => {
-  const first = await collect([okSource('a', 3)], { now: t1, fetch });
-  assert.equal(sameContent(first, await collect([okSource('a', 3)], { now: t2, fetch })), true);
-  assert.equal(sameContent(first, await collect([okSource('a', 4)], { now: t2, fetch })), false);
-  assert.equal(sameContent(first, await collect([brokenSource('a')], { now: t2, fetch, previous: first })), false);
-  assert.equal(sameContent(null, first), false);
-  assert.equal(sameContent({ schemaVersion: 0, sources: [] }, first), false);
+test('collect: inkompatible vorherige data.json wird ignoriert', async () => {
+  const [a] = (await collect([brokenSource('a')], { now: t1, fetch, previous: { schemaVersion: 0, sources: [{ id: 'a', sections: sections(1) }] } })).sources;
+  assert.deepEqual(a.sections, []);
+  assert.equal(a.lastSuccessAt, null);
+  const [b] = (await collect([brokenSource('a')], { now: t1, fetch, previous: 'kaputt' })).sources;
+  assert.deepEqual(b.sections, []);
 });

@@ -3,8 +3,11 @@
 Ziel: Das Frontend rendert alle Quellen **ohne quellenspezifischen Code**.
 Jede Quelle liefert Abschnitte (`sections`) mit Einträgen (`entries`), deren
 Felder aus einem festen Vokabular stammen (siehe unten). Das Frontend kennt nur
-dieses Vokabular (Beschriftung, Einheit, Reihenfolge) und zeigt pro Abschnitt
-die Spalten, die in den Einträgen vorkommen.
+dieses Vokabular (Beschriftung, Einheit, Format). Was angezeigt wird, legt
+jeder Abschnitt über `display` fest. Die Entscheidung liegt damit beim
+Scraper der Quelle, das Frontend setzt sie nur generisch um.
+
+`data.json` wird nicht committet, sondern nur deployt (ROADMAP #2).
 
 ## Wurzel
 
@@ -46,9 +49,30 @@ die Daten sind validiert, oder es ist `"error"`.
   "id": "hourly",                    // eindeutig innerhalb der Quelle
   "title": "Stundenprognose Stadtzentrum",
   "observedAt": "…",                 // optional: Messzeitpunkt (Beobachtungen)
+  "display": { /* Display, optional */ },
   "entries": [ /* Entry, mindestens 1 */ ]
 }
 ```
+
+## Display (Anzeige-Hinweise, alle Felder optional)
+
+```jsonc
+{
+  "fields": ["condition", "temp", ["precipMm", "precipProb"]],
+  // Spalten in Reihenfolge; ein Array fasst mehrere Felder in einer Zelle
+  // zusammen (Überschrift = Beschriftung des ersten Felds).
+  // Ohne "fields": alle vorkommenden Wertefelder.
+  "layout": "table",      // "table" (Zeilen) | "cards" (je Eintrag eine Karte)
+  "hidePast": true,       // vergangene Einträge ausblenden (nur time/date)
+  "limit": 8,             // höchstens so viele Einträge (nach hidePast)
+  "horizonHours": 6       // nur Einträge, die innerhalb von N Stunden beginnen
+}
+```
+
+„Vergangen" bedeutet: Das Ende liegt vor jetzt. Das Ende ist `timeEnd`, sonst der
+Beginn des nächsten Eintrags (der aktuelle Eintrag bleibt also sichtbar), bei
+`date` Mitternacht des Folgetags. Beginn eines `date`-Eintrags ist 00:00
+Europe/Vienna. Mit `horizonHours: 6` erscheint z.B. „Morgen" ab 18 Uhr.
 
 ## Entry
 
@@ -67,7 +91,8 @@ Wertefelder (alle optional; `null` = Quelle zeigt keinen Wert, z.B. „-"):
 | Feld | Typ | Einheit | Bedeutung |
 |---|---|---|---|
 | `condition` | string | – | Wetterzustand im Originalwortlaut der Quelle |
-| `iconUrl` | string | – | Original-Symbol der Quelle (absolute URL) |
+| `isNight` | boolean | – | Nachtsymbol (aus Quellen-Icon bzw. Sonnenauf-/-untergang); steuert das Emoji |
+| `iconUrl` | string | – | Original-Symbol der Quelle (absolute URL); nur Info, das Frontend lädt es nicht (ROADMAP #11) |
 | `temp` | number | °C | Temperatur |
 | `tempFeels` | number | °C | gefühlte Temperatur (GeoSphere: Radl-Temperatur) |
 | `tempMin` | number | °C | Tagesminimum |
@@ -88,8 +113,9 @@ in `lib/schema.js` lehnt unbekannte Felder ab, damit Tippfehler auffallen.
 
 ## Quellen (Stand schemaVersion 1)
 
-| Quelle | Sections | Zeilenschlüssel |
-|---|---|---|
-| `geosphere` | `hourly`: 24 Stundenwerte ab aktueller Stunde | `time` + `timeEnd` |
-| `orf` | `stations`: 4 Grazer Messstationen, mit `observedAt` | `location` |
-| `bergfex` | `daily`: Heute + Morgen; `intervals`: 3-h-Werte Heute + Morgen | `date` / `time` |
+| Quelle | Sections | Zeilenschlüssel | Anzeige (`display`) |
+|---|---|---|---|
+| `geosphere` | `hourly`: 24 Stundenwerte ab aktueller Stunde | `time` + `timeEnd` | Wetter, Temp., Niederschlag; hidePast |
+| `orf` | `stations`: 4 Grazer Messstationen, mit `observedAt` | `location` | Wetter, Temp. |
+| `bergfex` | `daily`: Heute + Morgen | `date` | Karten, alles außer Schneefallgrenze; hidePast, horizonHours 6 |
+| `bergfex` | `intervals`: 3-h-Werte Heute + Morgen | `time` | alles außer Schneefallgrenze; hidePast, limit 8 |
