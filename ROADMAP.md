@@ -79,7 +79,7 @@ In `data.json` stehen jeweils alle verfügbaren Werte, also mehr als angezeigt.
 ## Phasen für den Agenten (Claude Code)
 
 ### Phase 1 — Grundgerüst
-**Status:** lokal erledigt; GitHub-Repo + Pages in Arbeit
+**Status:** erledigt (Repo `martinorthacker/look_outside`, Pages: https://martinorthacker.github.io/look_outside/)
 - Repo-Struktur wie oben anlegen, `package.json` in `scraper/`
 - GitHub Pages aktivieren, Quelle **„GitHub Actions"** (nicht Branch/`docs/`, siehe #2)
 - `.github/workflows/scrape.yml` als Skelett anlegen mit **beiden** Triggern:
@@ -101,7 +101,7 @@ In `data.json` stehen jeweils alle verfügbaren Werte, also mehr als angezeigt.
   als Testgrundlage (nur lokal, #10)
 
 ### Phase 4 — Orchestrator + Workflow-Integration
-**Status:** lokal erledigt; Umstellung auf Pages-Artefakt (#2) und Live-Test in Arbeit
+**Status:** erledigt, live per `push` und `workflow_dispatch` getestet
 - `scraper/index.js`: ruft alle 3 Scraper auf, fängt Fehler pro Quelle ab
   (eine kaputte Quelle darf die anderen nicht blockieren), schreibt `docs/data.json`
 - Workflow: Checkout → Node setup → `npm ci` → `npm test` → vorherige `data.json`
@@ -110,17 +110,20 @@ In `data.json` stehen jeweils alle verfügbaren Werte, also mehr als angezeigt.
 - Mit `workflow_dispatch` mehrfach manuell testen
 
 ### Phase 5 — Frontend
-**Status:** in Arbeit
+**Status:** erledigt
 - Minimale Seite in `docs/`, lädt `data.json`, rendert 3 Blöcke (siehe „Anzeige")
 
 ### Phase 6 — Handy-Deployment
-**Status:** in Arbeit (#6: PWA). Auf dem Handy: Seite in Chrome öffnen →
+**Status:** erledigt (#6: PWA). Auf dem Handy: Seite in Chrome öffnen →
 Menü → „Zum Startbildschirm hinzufügen" bzw. „App installieren"
 
 ### Phase 7 — Härtung
 - Ein paar Tage Cron beobachten (läuft er zuverlässig, kommt data.json rechtzeitig an)
 - Bei Bedarf Cron-Minute nachjustieren
 - Nach > 60 Tagen prüfen, ob der Schedule noch aktiv ist (#13)
+- bergfex antwortete beim ersten Live-Lauf (15.11.2026) GitHub-Runnern mit
+  HTTP 429, beim zweiten mit 200. Seither gibt es einen Wiederholungsversuch
+  (`lib/http.js`). Beobachten, wie oft bergfex trotzdem ausfällt (Workflow-Warnungen)
 
 ## Nicht-Ziele
 - Keine Konto-/Multi-User-Funktion
