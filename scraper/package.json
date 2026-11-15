@@ -1,0 +1,14 @@
+{
+  "name": "look-outside-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scraped GeoSphere, ORF und bergfex und schreibt docs/data.json",
+  "type": "module",
+  "scripts": {
+    "scrape": "node index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cheerio": "1.2.0"
+  }
+}
