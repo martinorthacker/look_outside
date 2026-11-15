@@ -5,3 +5,10 @@ fragen_zu_*.md
 
 # Lokale Referenz-Screenshots (Fremdseiten), nicht fürs öffentliche Repo
 /*.png
+
+# Test-Fixtures sind Kopien fremder Seiten → nur lokal (ROADMAP #10)
+scraper/fixtures/*
+!scraper/fixtures/README.md
+
+# Wird vom Workflow erzeugt und als Pages-Artefakt deployt, nie committet (ROADMAP #2)
+docs/data.json

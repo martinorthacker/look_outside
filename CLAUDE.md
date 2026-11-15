@@ -13,7 +13,8 @@ Chat/PR benennen, nicht stillschweigend abweichen.**
 Kurzfassung:
 - Backend = GitHub Actions Cron-Workflow (kein Dauerserver, kein Edge-Worker)
 - Parsing via cheerio (Node.js), kein DOM-Emulation nötig für einfaches HTML-Parsing
-- Frontend-Hosting = GitHub Pages, Quelle: `docs/`-Ordner im `main`-Branch
+- Frontend-Hosting = GitHub Pages, deployt per Actions-Artefakt (`docs/` +
+  generierte `data.json`); `data.json` wird **nie committet** (Entscheidung #2)
 - Gemeinsames JSON-Schema für alle 3 Quellen (Frontend soll quellenagnostisch rendern)
 - Repo ist public (siehe Entscheidung #8) — keine Secrets/Zugangsdaten im Code,
   auch wenn aktuell keine nötig sind
@@ -22,9 +23,12 @@ Kurzfassung:
 - Scraping/Orchestrierung: Node.js, `cheerio` für HTML-Parsing
 - CI/Scheduling: GitHub Actions (`schedule` **und** `workflow_dispatch` Trigger
   — Letzteres zwingend, damit Läufe manuell testbar sind, ohne auf die nächste
-  volle Stunde zu warten)
-- Frontend: reines HTML/CSS/JS, keine Frameworks (Projekt soll minimal bleiben)
-- Keine Datenbank, keine externe Storage — `docs/data.json` im Repo selbst
+  volle Stunde zu warten; zusätzlich `push` auf `main`, damit Code-Änderungen
+  sofort ausgerollt werden)
+- Frontend: reines HTML/CSS/JS, keine Frameworks (Projekt soll minimal bleiben),
+  PWA mit Service Worker (Entscheidung #6)
+- Keine Datenbank, keine externe Storage — `data.json` existiert nur im
+  Pages-Deployment; der Workflow holt den vorherigen Stand von der Live-Seite
 
 ## Arbeitsweise
 - Erkläre nicht-offensichtliche technische Entscheidungen kurz im Code-
@@ -59,8 +63,12 @@ Umsetzung: `.node-version` ist die einzige Quelle der Node-Version (Workflow:
 - `./dev.sh npm ci` / `./dev.sh npm test`
 - `./dev.sh node sources/<id>.js [fixtures/<id>.html]`: eine Quelle live bzw. aus Datei
 - `./dev.sh node index.js`: alle Quellen → `docs/data.json`
-- `./dev.sh node tools/update-fixtures.js [<id>]`: Fixtures + Snapshot erneuern,
-  danach den Diff der `*.expected.json` prüfen und die Tests in `test/<id>.test.js` anpassen
+- `./dev.sh node tools/update-fixtures.js [<id>] [--reparse]`: lokale Fixtures +
+  Snapshot erneuern (`--reparse`: nur Snapshot aus vorhandenem HTML); das Skript
+  meldet, was sich am Parser-Ergebnis geändert hat
+- `./dev.sh node tools/make-icons.js`: PWA-Icons in `docs/` neu erzeugen
+- Frontend-Vorschau: `./dev.sh node index.js` (erzeugt `docs/data.json`), dann
+  `python3 -m http.server -d docs 8000` → http://localhost:8000
 
 ## Was NICHT tun
 - Keine Live-Scrapes bei Seitenaufruf durch den User — ausschließlich der
@@ -70,10 +78,17 @@ Umsetzung: `.node-version` ist die einzige Quelle der Node-Version (Workflow:
 - Keine Annahme, dass eine Quelle stabil bleibt — jeder Scraper braucht
   einen erkennbaren Fehlerzustand statt stillem Leerwert; ein Ausfall einer
   Quelle darf die anderen zwei nicht blockieren
-- Keine leeren Commits, wenn sich `data.json` inhaltlich nicht geändert hat
+- `data.json`, Test-Fixtures (Kopien fremder Seiten) und die lokalen
+  Referenz-Screenshots nicht committen (ROADMAP #2, #10)
+- Keine Original-Icons der Quellen im Frontend laden (ROADMAP #11)
 
 ## Tests / Review-Erwartung
 - Für jeden Scraper: mindestens 1 gespeichertes Beispiel-HTML als
-  Testfixture (schützt vor stillem Bruch bei Refactoring/Layoutänderungen)
+  Testfixture (schützt vor stillem Bruch bei Refactoring/Layoutänderungen) —
+  **nur lokal** in `scraper/fixtures/` (ROADMAP #10); ohne Fixtures werden
+  diese Tests übersprungen
+- Committete Tests in `scraper/test/` verwenden synthetisches Markup, das die
+  Struktur der Quelle nachbildet, und laufen in jedem Workflow-Lauf vor dem
+  Deploy (rot → kein Deploy)
 - `workflow_dispatch` immer parallel zu `schedule` einbauen, damit Läufe
   manuell testbar sind
