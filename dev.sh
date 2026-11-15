@@ -9,6 +9,6 @@ set -eu
 cd "$(dirname "$0")"
 TTY=""; [ -t 0 ] && [ -t 1 ] && TTY="-t"
 exec docker run --rm -i $TTY \
-  -u "$(id -u):$(id -g)" -e HOME=/tmp \
+  -u "$(id -u):$(id -g)" -e HOME=/tmp -e npm_config_update_notifier=false \
   -v "$PWD":/app -w /app/scraper \
   "node:$(cat .node-version)-trixie-slim" "$@"
