@@ -2,26 +2,38 @@ name: scrape
 
 on:
   # Minute 25: ORF aktualisiert erst ca. 10–20 Min nach :00 (ROADMAP #9).
-  # Stündlicher Cron ist DST-unabhängig, da AT-Offset immer ganze Stunden.
+  # Stündlicher Cron ist DST-unabhängig, da der AT-Offset immer ganze Stunden beträgt.
   schedule:
     - cron: "25 * * * *"
   # Manuell auslösbar zum Testen, ohne auf die nächste Minute 25 zu warten.
   workflow_dispatch:
+  # Code-/Frontend-Änderungen sofort ausrollen statt erst beim nächsten Cron.
+  push:
+    branches: [main]
+    paths: ["docs/**", "scraper/**", ".node-version", ".github/workflows/scrape.yml"]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write      # Pages-Deploy
+  id-token: write   # Pages-Deploy (OIDC)
+  actions: write    # Selbst-Reaktivierung gegen 60-Tage-Inaktivität (ROADMAP #13)
 
-# Nie zwei Läufe gleichzeitig (sonst Push-Konflikt auf data.json).
+# Nie zwei Deploys gleichzeitig; laufende Deploys nicht abbrechen.
 concurrency:
-  group: scrape
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  scrape:
+  scrape-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # kein Push nötig (data.json wird nicht committet)
 
       - uses: actions/setup-node@v7
         with:
@@ -33,22 +45,39 @@ jobs:
         working-directory: scraper
         run: npm ci
 
-      # Schreibt docs/data.json nur bei inhaltlicher Änderung (Zeitstempel zählen nicht).
-      # Quellenfehler → Warnung im Lauf + Fehlerzustand in data.json, Lauf bleibt grün.
+      # Rote Tests → kein Deploy, die Live-Seite bleibt auf dem letzten Stand.
+      - name: Test
+        working-directory: scraper
+        run: npm test
+
+      # data.json ist nicht im Repo (ROADMAP #2). Der vorherige Stand kommt von der
+      # Live-Seite und liefert bei Quellenausfall die letzten gültigen Daten.
+      # Query-Parameter umgeht den Pages-CDN-Cache (max-age 600 s).
+      - name: Vorherige data.json holen
+        run: |
+          url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/data.json?t=$(date +%s)"
+          if curl -fsS --retry 2 --max-time 20 -o docs/data.json "$url"; then
+            echo "vorherige data.json: $(wc -c < docs/data.json) Bytes"
+          else
+            rm -f docs/data.json
+            echo "::notice title=data.json::Keine vorherige data.json (erster Deploy?) – kein Fallback bei Quellenausfall"
+          fi
+
       - name: Scrape
         working-directory: scraper
         run: node index.js
 
-      # git status statt git diff --quiet: erkennt auch eine noch nicht getrackte data.json.
-      - name: Commit data.json (nur bei Änderung)
-        run: |
-          if [ -z "$(git status --porcelain -- docs/data.json)" ]; then
-            echo "data.json unverändert – kein Commit"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json
-          git commit -m "data: Update $(TZ=Europe/Vienna date '+%Y-%m-%d %H:%M')"
-          # Falls zwischenzeitlich jemand gepusht hat: rebasen statt scheitern.
-          git push || { git pull --rebase && git push; }
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+      # Ohne Commits gibt es keine Repo-Aktivität; GitHub würde den Schedule nach
+      # 60 Tagen deaktivieren. Erneutes Aktivieren per API setzt den Zähler zurück.
+      - name: Schedule aktiv halten
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/scrape.yml/enable"
