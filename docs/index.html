@@ -2,11 +2,28 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Nur Eigenbedarf (ROADMAP #7): nicht in Suchmaschinen -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
   <title>look_outside</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
 </head>
 <body>
-  <p>look_outside – Frontend folgt (Phase 5).</p>
+  <header class="top">
+    <h1>look_outside</h1>
+    <p id="stand" class="stand" aria-live="polite"></p>
+    <button id="refresh" type="button" aria-label="Neu laden" title="Neu laden">↻</button>
+  </header>
+  <main id="app">
+    <p class="muted">Lade…</p>
+  </main>
+  <noscript><p class="alert">Diese Seite braucht JavaScript.</p></noscript>
 </body>
 </html>
