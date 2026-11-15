@@ -26,19 +26,27 @@ Aktualisierungsrhythmus: stündlich, mit Puffer nach der vollen Stunde
 | 8 | Repository-Sichtbarkeit: **public**, damit GitHub Actions unlimitiert kostenlos bleibt | entschieden |
 | 9 | Cron-Zeitpunkt: `25 * * * *` (Minute 25 jeder Stunde) als Startwert, ggf. nachjustieren falls ORF später/früher aktualisiert. **Achtung**: GitHub-Cron läuft in UTC — bei Umstellung Sommer-/Winterzeit muss der Cron-Ausdruck manuell verschoben werden (Wien = UTC+2 im Sommer, UTC+1 im Winter) | entschieden, DST-Anpassung als wiederkehrende Wartungsaufgabe vermerkt |
 
-## Repo-Struktur (Vorschlag)
+## Repo-Struktur
 
 ```
 /
-├── .github/workflows/scrape.yml   # Cron + workflow_dispatch
+├── .github/workflows/
+│   ├── scrape.yml                 # Cron + workflow_dispatch
+│   └── test.yml                   # Fixture-Tests bei Code-Änderungen
+├── .node-version                  # einzige Quelle der Node-Version (CI + Docker)
+├── dev.sh                         # lokaler Node-Container, z.B. ./dev.sh npm test
 ├── scraper/
 │   ├── package.json
 │   ├── schema.md                  # gemeinsames Datenschema, dokumentiert
 │   ├── sources/
+│   │   ├── index.js               # Liste aller Quellen (Anzeigereihenfolge)
 │   │   ├── geosphere.js
 │   │   ├── orf.js
 │   │   └── bergfex.js
-│   ├── fixtures/                  # gespeicherte Beispiel-HTMLs für Tests
+│   ├── lib/                       # HTTP, Zeit (Europe/Vienna), Parsing, Schema-Validierung, collect
+│   ├── fixtures/                  # bereinigte Beispiel-HTMLs + erwartete Parser-Ausgabe
+│   ├── test/                      # node --test
+│   ├── tools/update-fixtures.js   # Fixtures live erneuern
 │   └── index.js                   # orchestriert alle 3, schreibt docs/data.json
 ├── docs/                          # GitHub Pages Quelle
 │   ├── index.html
@@ -52,6 +60,7 @@ Aktualisierungsrhythmus: stündlich, mit Puffer nach der vollen Stunde
 ## Phasen für den Agenten (Claude Code)
 
 ### Phase 1 — Grundgerüst
+**Status:** lokal erledigt; GitHub-Repo + Pages-Aktivierung offen (wartet auf Freigabe)
 - Repo-Struktur wie oben anlegen, `package.json` in `scraper/`
 - GitHub Pages auf `docs/`-Ordner im `main`-Branch aktivieren (Repo Settings)
 - `.github/workflows/scrape.yml` als Skelett anlegen mit **beiden** Triggern:
@@ -60,17 +69,20 @@ Aktualisierungsrhythmus: stündlich, mit Puffer nach der vollen Stunde
   die nächste volle Stunde zu warten
 
 ### Phase 2 — Ein Scraper isoliert zum Laufen bringen
+**Status:** erledigt
 - Nur GeoSphere-Quelle, als reines Node-Skript (`node scraper/sources/geosphere.js`),
   lokal ausführbar und testbar, noch ohne Workflow-Integration
 - Gemeinsames Datenschema in `scraper/schema.md` festlegen, bevor die
   restlichen Scraper gebaut werden
 
 ### Phase 3 — Restliche 2 Scraper
+**Status:** erledigt
 - ORF + bergfex nach demselben Schema
 - Für jeden Scraper: mind. 1 gespeichertes Beispiel-HTML in `scraper/fixtures/`
   als Testgrundlage (schützt vor stillem Bruch bei Layoutänderungen)
 
 ### Phase 4 — Orchestrator + Workflow-Integration
+**Status:** lokal erledigt und getestet; Live-Test per `workflow_dispatch` offen (wartet auf Push)
 - `scraper/index.js`: ruft alle 3 Scraper auf, fängt Fehler pro Quelle ab
   (eine kaputte Quelle darf die anderen nicht blockieren), schreibt `docs/data.json`
 - Workflow: Checkout → Node setup → `npm ci` → Skript ausführen → Diff-Check

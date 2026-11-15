@@ -53,6 +53,15 @@ Workflow verwendeten Node-Version vorsehen, damit:
   "geht bei mir, aber nicht im Workflow"-Überraschungen)
 - keine globalen npm-Installationen auf dem Host nötig sind
 
+Umsetzung: `.node-version` ist die einzige Quelle der Node-Version (Workflow:
+`setup-node` mit `node-version-file`; lokal: `./dev.sh` startet
+`node:<version>-trixie-slim`, Arbeitsverzeichnis `scraper/`).
+- `./dev.sh npm ci` / `./dev.sh npm test`
+- `./dev.sh node sources/<id>.js [fixtures/<id>.html]`: eine Quelle live bzw. aus Datei
+- `./dev.sh node index.js`: alle Quellen → `docs/data.json`
+- `./dev.sh node tools/update-fixtures.js [<id>]`: Fixtures + Snapshot erneuern,
+  danach den Diff der `*.expected.json` prüfen und die Tests in `test/<id>.test.js` anpassen
+
 ## Was NICHT tun
 - Keine Live-Scrapes bei Seitenaufruf durch den User — ausschließlich der
   Cron-Workflow scraped, das Handy lädt nur die statische `data.json`
