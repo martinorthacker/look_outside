@@ -52,10 +52,12 @@ jobs:
 
       # data.json ist nicht im Repo (ROADMAP #2). Der vorherige Stand kommt von der
       # Live-Seite und liefert bei Quellenausfall die letzten gültigen Daten.
-      # Query-Parameter umgeht den Pages-CDN-Cache (max-age 600 s).
+      # Das Pages-CDN cacht bis zu 600 s und ignoriert Query-Parameter/no-cache
+      # (getestet). Bei stündlichem Cron egal; nur bei Läufen < 10 Min hintereinander
+      # kann der Fallback-Stand einen Lauf älter sein (lastSuccessAt stimmt trotzdem).
       - name: Vorherige data.json holen
         run: |
-          url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/data.json?t=$(date +%s)"
+          url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/data.json"
           if curl -fsS --retry 2 --max-time 20 -o docs/data.json "$url"; then
             echo "vorherige data.json: $(wc -c < docs/data.json) Bytes"
           else
