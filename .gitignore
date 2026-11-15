@@ -1,0 +1,7 @@
+node_modules/
+
+# Temporäre Rückfragen-Dateien (siehe CLAUDE.md, Rückfragen-Workflow)
+fragen_zu_*.md
+
+# Lokale Referenz-Screenshots (Fremdseiten), nicht fürs öffentliche Repo
+/*.png
