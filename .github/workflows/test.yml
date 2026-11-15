@@ -1,0 +1,27 @@
+name: test
+
+# Fixture-Tests bei Code-Änderungen. Die stündlichen data.json-Commits des
+# Bots lösen das nicht aus (Pfadfilter; Pushes via GITHUB_TOKEN triggern ohnehin
+# keine Workflows).
+on:
+  push:
+    paths: ["scraper/**", ".node-version", ".github/workflows/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: scraper/package-lock.json
+      - working-directory: scraper
+        run: npm ci && npm test

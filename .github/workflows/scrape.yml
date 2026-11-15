@@ -33,4 +33,22 @@ jobs:
         working-directory: scraper
         run: npm ci
 
-      # Scrape-, Diff- und Commit-Schritte folgen in Phase 4.
+      # Schreibt docs/data.json nur bei inhaltlicher Änderung (Zeitstempel zählen nicht).
+      # Quellenfehler → Warnung im Lauf + Fehlerzustand in data.json, Lauf bleibt grün.
+      - name: Scrape
+        working-directory: scraper
+        run: node index.js
+
+      # git status statt git diff --quiet: erkennt auch eine noch nicht getrackte data.json.
+      - name: Commit data.json (nur bei Änderung)
+        run: |
+          if [ -z "$(git status --porcelain -- docs/data.json)" ]; then
+            echo "data.json unverändert – kein Commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          git commit -m "data: Update $(TZ=Europe/Vienna date '+%Y-%m-%d %H:%M')"
+          # Falls zwischenzeitlich jemand gepusht hat: rebasen statt scheitern.
+          git push || { git pull --rebase && git push; }
