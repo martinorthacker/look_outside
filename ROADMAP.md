@@ -121,7 +121,12 @@ Menü → „Zum Startbildschirm hinzufügen" bzw. „App installieren"
 - Ein paar Tage Cron beobachten (läuft er zuverlässig, kommt data.json rechtzeitig an).
   Erste Nacht (15./16.11.2026) mit nur `25 * * * *`: 1 von 9 Läufen → Ersatz-Slots (#9).
   Prüfen, wie viele Stunden trotzdem ohne Scrape bleiben (Läufe mit Job
-  `scrape-and-deploy` vs. nur `check`)
+  `scrape-and-deploy` vs. nur `check`). **Auswertung ca. 19.11.2026.**
+  Bleiben zu viele Stunden leer → externer Auslöser: cron-job.org ruft stündlich
+  um :25 `POST /repos/martinorthacker/look_outside/actions/workflows/scrape.yml/dispatches`
+  (Body `{"ref":"main"}`, erwartet 204) mit einem Fine-grained PAT (nur dieses
+  Repo, „Actions: Read and write“, mit Ablaufdatum); GitHub-Cron dann nur noch
+  `40,55` als Rückfallebene. Token liegt beim Drittdienst, nicht im Repo (#8)
 - Bei Bedarf Cron-Minute nachjustieren
 - Nach > 60 Tagen prüfen, ob der Schedule noch aktiv ist (#13)
 - bergfex antwortete beim ersten Live-Lauf (15.11.2026) GitHub-Runnern mit
