@@ -24,7 +24,7 @@ Aktualisierungsrhythmus: stündlich, mit Puffer nach der vollen Stunde
 | 6 | Auslieferung ans Handy: **PWA** mit `manifest.json`, Icon und Service Worker (network-first: online immer frisch, offline letzter geladener Stand) | entschieden |
 | 7 | Rechtliches: Scraping von ORF/bergfex evtl. ToS-Konflikt → nur Eigenbedarf, keine Veröffentlichung/Weiterverbreitung, moderate Abruffrequenz. Repo ist public (Scraper-Code sichtbar, Pages-Seite mit `noindex`) — Risiko bewusst akzeptiert, da reine Wetteraggregation für Eigenbedarf | Risiko, akzeptiert |
 | 8 | Repository-Sichtbarkeit: **public**, damit GitHub Actions unlimitiert kostenlos bleibt | entschieden |
-| 9 | Cron-Zeitpunkt: `25 * * * *` (Minute 25 jeder Stunde, rund um die Uhr) als Startwert, ggf. nachjustieren falls ORF später/früher aktualisiert. GitHub-Cron läuft in UTC; bei einem **stündlichen** Cron ist das egal, da der österreichische Offset immer ganze Stunden beträgt → keine Sommer-/Winterzeit-Wartung nötig. Erst relevant, wenn der Cron auf bestimmte Stunden eingeschränkt wird | entschieden |
+| 9 | Cron-Zeitpunkt: `25,40,55 * * * *`: Minute 25 jeder Stunde (rund um die Uhr), ggf. nachjustieren falls ORF später/früher aktualisiert. :40/:55 sind **Ersatz-Slots**, weil GitHub `schedule`-Läufe verzögert und bei Last verwirft (15./16.11.2026: 1 von 9 Läufen kam an, 47 Min. verspätet). Ein `schedule`-Lauf entfällt, wenn die Live-`data.json` in der laufenden Stunde schon nach Minute 20 erzeugt wurde → weiterhin höchstens ein Scrape pro Stunde. GitHub-Cron läuft in UTC; bei **stündlichen** Slots ist das egal, da der österreichische Offset immer ganze Stunden beträgt → keine Sommer-/Winterzeit-Wartung nötig. Erst relevant, wenn der Cron auf bestimmte Stunden eingeschränkt wird | entschieden (geändert 16.11.2026: vorher nur `25 * * * *`) |
 | 10 | Test-Fixtures (gespeicherte HTML-Seiten) sind Kopien fremder Seiten → **nur lokal** (`.gitignore`). Committete Tests nutzen synthetisches Markup, das die Struktur der Quellen nachbildet | entschieden |
 | 11 | Wetter-Symbole: **eigene Emoji** aus dem Wettertext (alle Quellen einheitlich), keine Original-Icons von Fremdservern im Frontend | entschieden |
 | 12 | Ausfall einer Quelle: letzte gültige Daten bleiben sichtbar, mit deutlichem Hinweis „veraltet – Stand … – Fehler: …". Workflow-Lauf bleibt grün (Warnung im Log), rot nur bei Programm-/Testfehlern | entschieden |
@@ -118,7 +118,10 @@ In `data.json` stehen jeweils alle verfügbaren Werte, also mehr als angezeigt.
 Menü → „Zum Startbildschirm hinzufügen" bzw. „App installieren"
 
 ### Phase 7 — Härtung
-- Ein paar Tage Cron beobachten (läuft er zuverlässig, kommt data.json rechtzeitig an)
+- Ein paar Tage Cron beobachten (läuft er zuverlässig, kommt data.json rechtzeitig an).
+  Erste Nacht (15./16.11.2026) mit nur `25 * * * *`: 1 von 9 Läufen → Ersatz-Slots (#9).
+  Prüfen, wie viele Stunden trotzdem ohne Scrape bleiben (Läufe mit Job
+  `scrape-and-deploy` vs. nur `check`)
 - Bei Bedarf Cron-Minute nachjustieren
 - Nach > 60 Tagen prüfen, ob der Schedule noch aktiv ist (#13)
 - bergfex antwortete beim ersten Live-Lauf (15.11.2026) GitHub-Runnern mit

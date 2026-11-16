@@ -2,9 +2,12 @@ name: scrape
 
 on:
   # Minute 25: ORF aktualisiert erst ca. 10–20 Min nach :00 (ROADMAP #9).
+  # :40/:55 sind Ersatz-Slots: GitHub verzögert schedule-Läufe und verwirft sie
+  # bei Last (15./16.11.2026: 1 von 9 Läufen kam an). Job "check" sorgt dafür,
+  # dass trotzdem nur einmal pro Stunde gescrapt wird.
   # Stündlicher Cron ist DST-unabhängig, da der AT-Offset immer ganze Stunden beträgt.
   schedule:
-    - cron: "25 * * * *"
+    - cron: "25,40,55 * * * *"
   # Manuell auslösbar zum Testen, ohne auf die nächste Minute 25 zu warten.
   workflow_dispatch:
   # Code-/Frontend-Änderungen sofort ausrollen statt erst beim nächsten Cron.
@@ -24,7 +27,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Nur für schedule: Hat ein früherer Slot dieser Stunde schon nach dem ORF-Update
+  # (Minute 20) gescrapt, entfällt dieser Lauf. Schont die Quellen (bergfex 429,
+  # ROADMAP #7). push/workflow_dispatch laufen immer.
+  check:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      fresh: ${{ steps.age.outputs.fresh }}
+    steps:
+      - id: age
+        run: |
+          url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/data.json"
+          gen=$(curl -fsS --retry 2 --max-time 20 "$url" | jq -r '.generatedAt // empty' || true)
+          ts=$(date -d "$gen" +%s 2>/dev/null || echo 0)
+          now=$(date +%s)
+          # UTC-Stundenbeginn = AT-Stundenbeginn (ganzzahliger Offset, #9).
+          due=$(( now - now % 3600 + 20 * 60 ))
+          # Pages-CDN kann bis 600 s alt sein → im Zweifel wird gescrapt, nie übersprungen.
+          if [ -n "$gen" ] && [ "$ts" -ge "$due" ]; then
+            echo "data.json von $gen ist für diese Stunde aktuell → kein Scrape"
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "data.json von ${gen:-?} → Scrape fällig"
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+          fi
+
   scrape-and-deploy:
+    needs: check
+    # check entfällt bei push/workflow_dispatch; schlägt check fehl, lieber scrapen.
+    if: ${{ !cancelled() && needs.check.outputs.fresh != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
