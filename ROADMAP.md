@@ -28,7 +28,7 @@ Aktualisierungsrhythmus: stündlich, mit Puffer nach der vollen Stunde
 | 10 | Test-Fixtures (gespeicherte HTML-Seiten) sind Kopien fremder Seiten → **nur lokal** (`.gitignore`). Committete Tests nutzen synthetisches Markup, das die Struktur der Quellen nachbildet | entschieden |
 | 11 | Wetter-Symbole: **eigene Emoji** aus dem Wettertext (alle Quellen einheitlich), keine Original-Icons von Fremdservern im Frontend | entschieden |
 | 12 | Ausfall einer Quelle: letzte gültige Daten bleiben sichtbar, mit deutlichem Hinweis „veraltet – Stand … – Fehler: …". Workflow-Lauf bleibt grün (Warnung im Log), rot nur bei Programm-/Testfehlern | entschieden |
-| 13 | Scheduled Workflows werden von GitHub nach 60 Tagen ohne Repo-Aktivität deaktiviert. Da keine Daten-Commits mehr entstehen (#2), aktiviert sich der Workflow bei jedem Lauf per API selbst neu (setzt den Zähler zurück) | entschieden, Wirksamkeit in Phase 7 prüfen |
+| 13 | Scheduled Workflows werden von GitHub nach 60 Tagen ohne Repo-Aktivität deaktiviert. Da keine Daten-Commits mehr entstehen (#2), aktiviert sich der Workflow per API selbst neu (setzt den Zähler zurück), aber **nur nach ≥ 45 Tagen ohne Commit und ohne vorheriges enable**: Am 15./16.11.2026 startete GitHub nach jedem enable-Aufruf stundenlang keine `schedule`-Läufe | entschieden (geändert 16.11.2026: vorher enable bei jedem Lauf), Wirksamkeit in Phase 7 prüfen |
 
 ## Anzeige (Frontend)
 

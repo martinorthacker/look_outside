@@ -111,8 +111,22 @@ jobs:
 
       # Ohne Commits gibt es keine Repo-Aktivität; GitHub würde den Schedule nach
       # 60 Tagen deaktivieren. Erneutes Aktivieren per API setzt den Zähler zurück.
+      # Nur nach >= 45 Tagen ohne Commit und ohne enable: Am 15./16.11.2026 kam nach
+      # jedem enable-Aufruf stundenlang kein schedule-Lauf (13 Slots hintereinander).
+      # enable setzt updated_at des Workflows, das dient als "zuletzt aktiviert".
       - name: Schedule aktiv halten
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/scrape.yml/enable"
+        run: |
+          wf="repos/${GITHUB_REPOSITORY}/actions/workflows/scrape.yml"
+          commit=$(date -d "$(git log -1 --format=%cI)" +%s)
+          enabled=$(date -d "$(gh api "$wf" --jq .updated_at)" +%s)
+          last=$(( commit > enabled ? commit : enabled ))
+          days=$(( ($(date +%s) - last) / 86400 ))
+          if [ "$days" -ge 45 ]; then
+            gh api -X PUT "$wf/enable"
+            echo "::notice title=Schedule::$days Tage ohne Commit/enable → Workflow reaktiviert"
+          else
+            echo "Letzter Commit/enable vor $days Tagen → kein enable nötig"
+          fi
