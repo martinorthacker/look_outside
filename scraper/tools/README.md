@@ -15,7 +15,8 @@ Abruf bleibt bei `fetch` und Cheerio.
 Workflow `bergfex-browser-probe` manuell auslösen. Für den ersten Test vor der
 Übernahme auf `main` startet er außerdem bei einem Push auf einen Branch
 `probe/bergfex-browser-*`. Er installiert Chromium, führt die Tests aus und
-meldet den Erfolg oder Misserfolg des Browserabrufs. Kein Pages-Deployment,
+meldet den Erfolg oder Misserfolg des Browserabrufs. Chromium läuft mit einem
+Browserfenster unter dem virtuellen Display Xvfb (`--headed`). Kein Pages-Deployment,
 kein Cron, nur Leseberechtigung für das Repository.
 
 ## Lokal im vorgesehenen Node-Container
@@ -41,7 +42,7 @@ node tools/probe-bergfex-browser.js
 node tools/probe-bergfex-browser.js --headed
 ```
 
-`--headed` benötigt eine grafische Sitzung und dient nur dem lokalen Vergleich.
+`--headed` benötigt eine grafische Sitzung oder ein virtuelles Display wie Xvfb.
 Der Test verwendet keine Stealth-Anpassungen, vorab gespeicherten Cookies oder
 Challenge-Solver. Auf Prognose-Markup wird nach der Navigation höchstens 45 s
 gewartet; dann endet der Prozess mit Exitcode 1. Eine Browserprüfung kann

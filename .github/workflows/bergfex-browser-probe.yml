@@ -34,4 +34,5 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - name: Bergfex in Chromium abrufen und mit Cheerio validieren
-        run: node tools/probe-bergfex-browser.js
+        # Reguläres Browserfenster unter Xvfb; kein Headless-User-Agent.
+        run: xvfb-run --auto-servernum node tools/probe-bergfex-browser.js --headed
