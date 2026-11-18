@@ -143,6 +143,11 @@ Menü → „Zum Startbildschirm hinzufügen" bzw. „App installieren"
   Cheerio und die Schema-Validierung verarbeiten können. Anleitung und
   Grenzen: `scraper/tools/README.md`. **Produktiver Abruf unverändert**;
   ein Browserwechsel hängt vom Testergebnis ab und wird separat entschieden.
+  **Ergebnis 18.11.2026:** Headless-Chromium lokal sowie Headless- und
+  Headed-Chromium (Xvfb) auf GitHub-Runnern liefern Cloudflare-Challenge/HTTP 403;
+  auch nach 45 s kein Prognose-Markup. Browserinstallation/-start und
+  Unit-Tests erfolgreich. Playwright wird deshalb nicht produktiv integriert;
+  Testprotokolle sind in `scraper/tools/README.md` verlinkt.
 
 ## Nicht-Ziele
 - Keine Konto-/Multi-User-Funktion
