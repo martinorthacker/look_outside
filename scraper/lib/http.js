@@ -43,6 +43,12 @@ async function fetchOnce(url) {
       : err.cause?.code ?? err.cause?.errors?.[0]?.code ?? err.cause?.message ?? err.message;
     throw new FetchError(`Abruf fehlgeschlagen (${reason})`, { retryable: true });
   }
+  // Cloudflare kennzeichnet Browserprüfungen auch bei HTTP 200/503 mit
+  // diesem Header. Die Challenge ist kein Wetter-HTML und kein Retry-Fall.
+  if (res.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
+    await res.body?.cancel();
+    throw new FetchError(`Cloudflare blockiert automatischen Abruf von ${new URL(url).hostname} (Browserprüfung; HTTP ${res.status})`);
+  }
   if (!res.ok) {
     const retryAfter = res.headers.get('retry-after');
     await res.body?.cancel();

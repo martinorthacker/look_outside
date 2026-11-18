@@ -23,6 +23,14 @@ before(async () => {
       res.writeHead(status, req.url.includes('ra') ? { 'retry-after': '3600' } : {});
       return res.end('nope');
     }
+    if (kind === 'challenge') {
+      res.writeHead(Number(arg), { 'cf-mitigated': 'challenge' });
+      return res.end(PAGE);
+    }
+    if (kind === 'forbidden') {
+      res.writeHead(403);
+      return res.end('Forbidden');
+    }
     if (kind === 'short') return res.end('<html></html>');
     res.writeHead(404);
     res.end();
@@ -33,6 +41,19 @@ before(async () => {
 after(() => server.close());
 
 const opts = { retryDelayMs: 5 };
+
+for (const status of [403, 200, 503]) {
+  test(`fetchHtml: Cloudflare-Challenge mit HTTP ${status} → klare Meldung, kein Retry`, async () => {
+    await assert.rejects(fetchHtml(`${base}/challenge/${status}`, opts),
+      new RegExp(`Cloudflare blockiert automatischen Abruf von 127\\.0\\.0\\.1 \\(Browserprüfung; HTTP ${status}\\)`));
+    assert.equal(hits.get(`/challenge/${status}`), 1);
+  });
+}
+
+test('fetchHtml: gewöhnliches HTTP 403 bleibt unverändert, kein Retry', async () => {
+  await assert.rejects(fetchHtml(`${base}/forbidden`, opts), /^Error: HTTP 403 Forbidden$/);
+  assert.equal(hits.get('/forbidden'), 1);
+});
 
 test('fetchHtml: 429 einmal → zweiter Versuch erfolgreich', async () => {
   assert.equal(await fetchHtml(`${base}/seq/429,200`, opts), PAGE);

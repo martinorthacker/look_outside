@@ -131,7 +131,18 @@ Menü → „Zum Startbildschirm hinzufügen" bzw. „App installieren"
 - Nach > 60 Tagen prüfen, ob der Schedule noch aktiv ist (#13)
 - bergfex antwortete beim ersten Live-Lauf (15.11.2026) GitHub-Runnern mit
   HTTP 429, beim zweiten mit 200. Seither gibt es einen Wiederholungsversuch
-  (`lib/http.js`). Beobachten, wie oft bergfex trotzdem ausfällt (Workflow-Warnungen)
+  (`lib/http.js`). **Befund 18.11.2026:** letzter Erfolg am 16.11., 09:46 Uhr
+  (Europe/Vienna); alle sieben folgenden Läufe scheiterten, zweimal mit 429
+  trotz Retry, danach fünfmal mit 403. Direkter Abruf bestätigt eine
+  Cloudflare-Browserprüfung (`cf-mitigated: challenge`). Solche Antworten
+  werden nun unabhängig vom HTTP-Status ausdrücklich gemeldet und nicht
+  erneut angefragt. Andere 403-Antworten bleiben gewöhnliche HTTP-Fehler.
+- Isolierter Browser-Machbarkeitstest: `scraper/tools/probe-bergfex-browser.js`
+  und Workflow `bergfex-browser-probe` (manuell oder Diagnose-Branch, kein
+  Cron/Deploy). Reguläres Playwright-Chromium muss aktuelle Daten laden, die
+  Cheerio und die Schema-Validierung verarbeiten können. Anleitung und
+  Grenzen: `scraper/tools/README.md`. **Produktiver Abruf unverändert**;
+  ein Browserwechsel hängt vom Testergebnis ab und wird separat entschieden.
 
 ## Nicht-Ziele
 - Keine Konto-/Multi-User-Funktion
